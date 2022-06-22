@@ -1,57 +1,41 @@
 //Move Delete Task To Task Compounent
-import React, { useState, useRef, useEffect } from "react";
-import axios from "axios";
+import React, { useState, useEffect, createContext } from "react";
 import Task from "./Task";
+import FetchFromServer from "./FetchFromServer";
+import TodoForm from "./TodoForm";
+import { Grid } from "@mui/material";
+
+export const TodoContext = createContext("TodoContext");
 
 function Home() {
-  const [TodoList, setTodoList] = useState([]);
-  const [inputValue, setInputValue] = useState("");
-  const inputRef = useRef();
-
-  const fetchFromServer = () => {
-    axios.get(`../api/todo`).then((res) => setTodoList(res.data));
-  };
-
-  const addTask = () => {
-    let newTask = {
-      id: Math.max(...TodoList.map((i) => i.id)) + 1,
-      title: inputRef.current.value,
-      completed: false,
-    };
-    newTask.title !== "" && setTodoList((prevList) => [...prevList, newTask]);
-  };
-
-  const removeTask = (idx) => {
-    setTodoList(TodoList.filter((task) => task.id !== idx));
-  };
-
-  useEffect(() => {
-    setTodoList(JSON.parse(localStorage.getItem("TodoList")));
-  }, []);
+  const [TodoList, setTodoList] = useState(() => {
+    const Saved = localStorage.getItem("TodoList");
+    return Saved ? JSON.parse(Saved) : [];
+  });
 
   useEffect(() => {
     localStorage.setItem("TodoList", JSON.stringify(TodoList));
+    console.log("TodoList Changed");
   }, [TodoList]);
 
+  const DisplayTodoList = TodoList.map((item) => (
+    <Task key={item.id} TaskInfo={item} />
+  ));
+
   return (
-    <>
-      <button onClick={fetchFromServer}>Fetch</button>
+    <TodoContext.Provider value={[TodoList, setTodoList]}>
+      <Grid container rowSpacing={3} p={3}>
+        <Grid item xs={12}>
+          <FetchFromServer setTodoList={setTodoList} />
+        </Grid>
 
-      <input
-        ref={inputRef}
-        onChange={(e) => setInputValue(e.target.value)}
-        value={inputValue}
-        placeholder="Write new task .."
-      />
-      <button onClick={addTask}>Add</button>
+        <TodoForm TodoList={TodoList} setTodoList={setTodoList} />
 
-      {TodoList.map((item) => (
-        <div key={item.id}>
-          <Task {...item} />
-          <button onClick={() => removeTask(item.id)}>Remove</button>
-        </div>
-      ))}
-    </>
+        <Grid item xs={12}>
+          {DisplayTodoList}
+        </Grid>
+      </Grid>
+    </TodoContext.Provider>
   );
 }
 
